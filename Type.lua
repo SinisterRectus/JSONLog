@@ -49,46 +49,33 @@ local function mergeArray(dest, arr)
 	end
 end
 
-local function new(v, meta)
-	return setmetatable({__t = {v}, n = 1}, meta)
+local function new(s, d, meta)
+	return setmetatable({__t = {[s] = d}, n = 1}, meta)
 end
 
 setmetatable(Type, {__call = function(self, d)
 	local s = getTypeString(d)
 	if s == 'object' then
 		parseObject(d)
-		return new(d, self)
+		return new(s, d, self)
 	elseif s == 'array' then
 		parseArray(d)
-		return new(d, self)
+		return new(s, d, self)
 	else
-		return new(s, self)
+		return new(s, true, self)
 	end
 end})
 
 function Type:has(value)
-	for _, v in ipairs(self.__t) do
-		if value == v then
-			return true
-		end
-	end
-	return false
+	return not not self.__t[value]
 end
 
 function Type:getObject()
-	for _, v in ipairs(self.__t) do
-		if getTypeString(v)  == 'object' then
-			return v
-		end
-	end
+	return self.__t['object']
 end
 
 function Type:getArray()
-	for _, v in ipairs(self.__t) do
-		if getTypeString(v)  == 'array' then
-			return v
-		end
-	end
+	return self.__t['array']
 end
 
 function Type:add(d)
@@ -100,7 +87,7 @@ function Type:add(d)
 			mergeObject(dest, d)
 		else
 			parseObject(d)
-			table.insert(self.__t, d)
+			self.__t['object'] = d
 		end
 	elseif str == 'array' then
 		local dest = self:getArray()
@@ -108,11 +95,11 @@ function Type:add(d)
 			mergeArray(dest, d)
 		else
 			parseArray(d)
-			table.insert(self.__t, d)
+			self.__t['array'] = d
 		end
 	else
 		if not self:has(str) then
-			table.insert(self.__t, str)
+			self.__t[str] = true
 		end
 	end
 end
@@ -149,18 +136,19 @@ end
 
 function Type:writePretty(f, n)
 	n = n or 0
-	for i, v in ipairs(self.__t) do
+	local i = 1
+	for s, v in pairs(self.__t) do
 		if i > 1 then
 			f:write(' or ')
 		end
-		local s = getTypeString(v)
 		if s == 'object' then
 			writeObject(f, v, n)
 		elseif s == 'array' then
 			writeArray(f, v, n)
-		elseif s == 'string' then
-			f:write(v)
+		elseif v == true then
+			f:write(s)
 		end
+		i = i + 1
 	end
 end
 
