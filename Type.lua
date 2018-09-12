@@ -18,89 +18,56 @@ local function getTypeString(d)
 	return s -- string, boolean, number
 end
 
-local function parseObject(obj)
-	for k, v in pairs(obj) do
-		obj[k] = Type(v)
-	end
-end
-
-local function mergeObject(dest, obj)
-	for k, v in pairs(dest) do
-		v:add(obj[k])
-		obj[k] = nil
-	end
-	for k, v in pairs(obj) do
-		dest[k] = dest[k] or Type(nil)
-		dest[k]:add(v)
-	end
-end
-
-local function parseArray(arr)
-	arr[1] = Type(arr[1])
-	for i = 2, #arr do
-		arr[1]:add(arr[i])
-		arr[i] = nil
-	end
-end
-
-local function mergeArray(dest, arr)
-	for _, v in ipairs(arr) do
-		dest[1]:add(v)
-	end
-end
-
-local function new(s, d, meta)
-	return setmetatable({__t = {[s] = d}, n = 1}, meta)
-end
-
 setmetatable(Type, {__call = function(self, d)
-	local s = getTypeString(d)
-	if s == 'object' then
-		parseObject(d)
-		return new(s, d, self)
-	elseif s == 'array' then
-		parseArray(d)
-		return new(s, d, self)
-	else
-		return new(s, true, self)
-	end
+	local ret = setmetatable({__t = {}, n = 0}, self)
+	ret:add(d)
+	return ret
 end})
 
-function Type:has(value)
-	return not not self.__t[value]
+function Type:addObject(obj)
+	local dest = self.__t['object']
+	if dest then
+		for k, v in pairs(dest) do
+			v:add(obj[k])
+			obj[k] = nil
+		end
+		for k, v in pairs(obj) do
+			dest[k] = dest[k] or Type(nil)
+			dest[k]:add(v)
+		end
+	else
+		for k, v in pairs(obj) do
+			obj[k] = Type(v)
+		end
+		self.__t['object'] = obj
+	end
 end
 
-function Type:getObject()
-	return self.__t['object']
-end
-
-function Type:getArray()
-	return self.__t['array']
+function Type:addArray(arr)
+	local dest = self.__t['array']
+	if dest then
+		for _, v in ipairs(arr) do
+			dest[1]:add(v)
+		end
+	else
+		arr[1] = Type(arr[1])
+		for i = 2, #arr do
+			arr[1]:add(arr[i])
+			arr[i] = nil
+		end
+		self.__t['array'] = arr
+	end
 end
 
 function Type:add(d)
 	self.n = self.n + 1
 	local str = getTypeString(d)
 	if str == 'object' then
-		local dest = self:getObject()
-		if dest then
-			mergeObject(dest, d)
-		else
-			parseObject(d)
-			self.__t['object'] = d
-		end
+		return self:addObject(d)
 	elseif str == 'array' then
-		local dest = self:getArray()
-		if dest then
-			mergeArray(dest, d)
-		else
-			parseArray(d)
-			self.__t['array'] = d
-		end
+		return self:addArray(d)
 	else
-		if not self:has(str) then
-			self.__t[str] = true
-		end
+		self.__t[str] = true
 	end
 end
 
@@ -145,7 +112,7 @@ function Type:writePretty(f, n)
 			writeObject(f, v, n)
 		elseif s == 'array' then
 			writeArray(f, v, n)
-		elseif v == true then
+		else
 			f:write(s)
 		end
 		i = i + 1
