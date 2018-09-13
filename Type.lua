@@ -59,6 +59,33 @@ function Type:addArray(arr)
 	end
 end
 
+function Type:addNumber(num)
+	local dest = self.__t['number']
+	if dest then
+		dest.min = math.min(dest.min, num)
+		dest.max = math.max(dest.max, num)
+	else
+		self.__t['number'] = {
+			min = num,
+			max = num,
+		}
+	end
+end
+
+function Type:addString(str)
+	local len = #str
+	local dest = self.__t['string']
+	if dest then
+		dest.min = math.min(dest.min, len)
+		dest.max = math.max(dest.max, len)
+	else
+		self.__t['string'] = {
+			min = len,
+			max = len,
+		}
+	end
+end
+
 function Type:add(d)
 	self.n = self.n + 1
 	local str = getTypeString(d)
@@ -66,6 +93,10 @@ function Type:add(d)
 		return self:addObject(d)
 	elseif str == 'array' then
 		return self:addArray(d)
+	elseif str == 'number' then
+		return self:addNumber(d)
+	elseif str == 'string' then
+		return self:addString(d)
 	else
 		self.__t[str] = true
 	end
@@ -101,6 +132,14 @@ local function writeArray(f, arr, n)
 	f:write(indent(n), ']')
 end
 
+local function writeNumber(f, num)
+	return f:write(string.format('number [%i, %i]', num.min, num.max))
+end
+
+local function writeString(f, str)
+	return f:write(string.format('string [%i, %i]', str.min, str.max))
+end
+
 function Type:writePretty(f, n)
 	n = n or 0
 	local i = 1
@@ -112,6 +151,10 @@ function Type:writePretty(f, n)
 			writeObject(f, v, n)
 		elseif s == 'array' then
 			writeArray(f, v, n)
+		elseif s == 'number' then
+			writeNumber(f, v)
+		elseif s == 'string' then
+			writeString(f, v)
 		else
 			f:write(s)
 		end
