@@ -19,7 +19,7 @@ local function getTypeString(d)
 end
 
 setmetatable(Type, {__call = function(self, d)
-	local ret = setmetatable({__t = {}, n = 0}, self)
+	local ret = setmetatable({__t = {}}, self)
 	ret:add(d)
 	return ret
 end})
@@ -46,16 +46,15 @@ end
 function Type:addArray(arr)
 	local dest = self.__t['array']
 	if dest then
-		for _, v in ipairs(arr) do
-			dest[1]:add(v)
+		for i = 1, #arr do
+			dest:add(arr[i])
 		end
 	else
-		arr[1] = Type(arr[1])
+		dest = Type(arr[1])
 		for i = 2, #arr do
-			arr[1]:add(arr[i])
-			arr[i] = nil
+			dest:add(arr[i])
 		end
-		self.__t['array'] = arr
+		self.__t['array'] = dest
 	end
 end
 
@@ -87,7 +86,6 @@ function Type:addString(str)
 end
 
 function Type:add(d)
-	self.n = self.n + 1
 	local str = getTypeString(d)
 	if str == 'object' then
 		return self:addObject(d)
@@ -114,9 +112,8 @@ local function writeObject(f, obj, n)
 	end
 	table.sort(keys)
 	for _, k in ipairs(keys) do
-		local v = obj[k]
 		f:write(indent(n + 1), k, ' : ')
-		v:writePretty(f, n + 1)
+		obj[k]:writePretty(f, n + 1)
 		f:write('\n')
 	end
 	f:write(indent(n), '}')
@@ -124,20 +121,18 @@ end
 
 local function writeArray(f, arr, n)
 	f:write('[\n')
-	for _, v in ipairs(arr) do
-		f:write(indent(n + 1))
-		v:writePretty(f, n + 1)
-		f:write('\n')
-	end
+	f:write(indent(n + 1))
+	arr:writePretty(f, n + 1)
+	f:write('\n')
 	f:write(indent(n), ']')
 end
 
 local function writeNumber(f, num)
-	return f:write(string.format('number [%i, %i]', num.min, num.max))
+	return f:write(string.format('number [%s, %s]', num.min, num.max))
 end
 
 local function writeString(f, str)
-	return f:write(string.format('string [%i, %i]', str.min, str.max))
+	return f:write(string.format('string [%s, %s]', str.min, str.max))
 end
 
 function Type:writePretty(f, n)

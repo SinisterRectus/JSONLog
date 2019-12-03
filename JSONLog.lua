@@ -49,7 +49,7 @@ function JSONLog:dumpPretty()
 	table.sort(keys)
 	for _, k in ipairs(keys) do
 		local v = self.data[k]
-		f:write(k, ' (n = ', v.n, ')\n')
+		f:write(k, '\n')
 		v:writePretty(f)
 		f:write('\n\n')
 	end
